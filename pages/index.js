@@ -1,15 +1,42 @@
 import {useState, useEffect} from "react";
 import {ethers} from "ethers";
-import atm_abi from "../artifacts/contracts/Assessment.sol/Assessment.json";
+import namekeeper_abi from "../artifacts/contracts/namekeeper.sol/Namekeeper.json";
 
 export default function HomePage() {
+
+  const inputBox = {
+    padding: '10px',
+    borderRadius: '5px',
+    border: '1px solid blue',
+
+
+  };
+
+  const btn = {
+    backgroundColor: 'blue',
+    color: 'white',
+    fontSize: '18px',
+    border: 'none',
+    fontWeight: 'bold',
+    padding: '10px',
+    borderRadius: '5px',
+    margin: '5px'
+  };
+
+
+
   const [ethWallet, setEthWallet] = useState(undefined);
   const [account, setAccount] = useState(undefined);
-  const [atm, setATM] = useState(undefined);
+  const [namekeeper, setNamekeeper] = useState(undefined);
   const [balance, setBalance] = useState(undefined);
+  const [userName, setuserName] = useState('');
+  const [error, setError] = useState(undefined);
+  const [success, setSuccess] = useState(undefined);
 
   const contractAddress = "0x5FbDB2315678afecb367f032d93F642f64180aa3";
-  const atmABI = atm_abi.abi;
+  const nameABI = namekeeper_abi.abi;
+
+
 
   const getWallet = async() => {
     if (window.ethereum) {
@@ -18,14 +45,14 @@ export default function HomePage() {
 
     if (ethWallet) {
       const account = await ethWallet.request({method: "eth_accounts"});
-      handleAccount(account);
+      handleAccount(account[0]);
     }
   }
 
   const handleAccount = (account) => {
     if (account) {
       console.log ("Account connected: ", account);
-      setAccount(account);
+      setAccount(account[0]);
     }
     else {
       console.log("No account found");
@@ -42,43 +69,59 @@ export default function HomePage() {
     handleAccount(accounts);
     
     // once wallet is set we can get a reference to our deployed contract
-    getATMContract();
+    getnamekeepercontract();
   };
 
-  const getATMContract = () => {
+  const getnamekeepercontract = () => {
     const provider = new ethers.providers.Web3Provider(ethWallet);
     const signer = provider.getSigner();
-    const atmContract = new ethers.Contract(contractAddress, atmABI, signer);
+    const atmContract = new ethers.Contract(contractAddress, nameABI, signer);
  
-    setATM(atmContract);
+    setNamekeeper(atmContract);
   }
 
   const getBalance = async() => {
-    if (atm) {
-      setBalance((await atm.getBalance()).toNumber());
+    const provider = new ethers.providers.Web3Provider(ethWallet);
+    if (namekeeper) {
+      setBalance(parseFloat(ethers.utils.formatEther(await provider.getBalance(account))).toFixed(2));
+    }
+    
+  }
+
+  const setName = async() => {
+    setSuccess(undefined);
+    setError(undefined);
+    if (namekeeper) {
+      try {
+        console.log("user name", userName);
+        let tx = await namekeeper.setname(userName);
+        await tx.wait()
+        setSuccess("Name set successfully")
+      } catch (error) {
+        console.log(error);
+        setError(error.message.split(":")[0]);
+      }
     }
   }
 
-  const deposit = async() => {
-    if (atm) {
-      let tx = await atm.deposit(1);
-      await tx.wait()
-      getBalance();
-    }
-  }
-
-  const withdraw = async() => {
-    if (atm) {
-      let tx = await atm.withdraw(1);
-      await tx.wait()
-      getBalance();
+  const getname = async() => {
+    setSuccess(undefined);
+    setError(undefined);
+    if (namekeeper) {
+      try {
+        let tx = await namekeeper.getname();
+        setSuccess(tx)
+      } catch (error) {
+        console.log(error.errorArgs[0]);
+        setError(error.errorArgs[0]);
+      }
     }
   }
 
   const initUser = () => {
     // Check to see if user has Metamask
     if (!ethWallet) {
-      return <p>Please install Metamask in order to use this ATM.</p>
+      return <p>Please install Metamask in order to use this namekeeper.</p>
     }
 
     // Check to see if user is connected. If not, connect to their account
@@ -92,10 +135,24 @@ export default function HomePage() {
 
     return (
       <div>
-        <p>Your Account: {account}</p>
+        <p>Your Account: {account.slice(0, 6) + "..." + account.slice(-4)}</p>
         <p>Your Balance: {balance}</p>
-        <button onClick={deposit}>Deposit 1 ETH</button>
-        <button onClick={withdraw}>Withdraw 1 ETH</button>
+
+        <div>
+         { success ? <p style={{color: 'green'}}>{success}</p> : <p style={{color:  "red"}}>{error}</p> }
+        </div>
+
+        <div className="">
+          <input id="userName" type="text" style={inputBox} placeholder="0xBamigboye" value={userName}
+          onChange={(e) => setuserName(e.target.value)} required />
+
+        <span className>
+           <button onClick={setName} style={btn}>Set Name</button>
+        </span>
+      </div>
+
+        <br /> 
+        <button onClick={getname} style={btn}>Get Name</button>
       </div>
     )
   }
@@ -104,7 +161,7 @@ export default function HomePage() {
 
   return (
     <main className="container">
-      <header><h1>Welcome to the Metacrafters ATM!</h1></header>
+      <header><h1>Welcome to Name Keeper!</h1></header>
       {initUser()}
       <style jsx>{`
         .container {

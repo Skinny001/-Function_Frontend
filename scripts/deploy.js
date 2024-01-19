@@ -7,12 +7,11 @@
 const hre = require("hardhat");
 
 async function main() {
-  const initBalance = 1;
-  const Main = await hre.ethers.getContractFactory("Main");
-  const main = await Main.deploy();
-  await main.deployed();
+  const Namekeeper = await hre.ethers.getContractFactory("Namekeeper");
+  const namekeeper = await Namekeeper.deploy();
+  await namekeeper.deployed();
 
-  console.log(` Main deploy to ${main.address}`);
+  console.log(` Namekeeper deploy to ${namekeeper.address}`);
 }
 
 // We recommend this pattern to be able to use async/await everywhere
